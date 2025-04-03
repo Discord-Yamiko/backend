@@ -26,7 +26,7 @@ async fn main() {
     .route("/api/backgrounds/:filename", get(get_background))
     .layer(CorsLayer::permissive());
   let port = get_port();
-  let addr = SocketAddr::from(([0, 0, 0, 0], port));
+  let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
   println!("BACKEND images on {}", addr);
 
