@@ -1,0 +1,51 @@
+name: 🔄️ CI/CD Deploy for Rust Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: 🚀 Deploy Rust Backend to VDS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧹 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔐 Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VDS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.VDS_HOST }}" >> ~/.ssh/known_hosts
+
+          echo "🛠️ Проверка: SSH подключение"
+          ssh -i ~/.ssh/id_rsa root@${{ secrets.VDS_HOST }} "echo '✅ Успешно подключено'"
+
+      - name: 📂 Create Project Directory on VDS
+        run: |
+          ssh -i ~/.ssh/id_rsa root@${{ secrets.VDS_HOST }} "mkdir -p /root/${{ github.event.repository.name }}"
+
+      - name: 📚 Copy Files to Server
+        run: |
+          rsync -avz --delete --exclude '.git' --exclude 'target' . root@${{ secrets.VDS_HOST }}:/root/${{ github.event.repository.name }}/
+
+      - name: 🔻 Create ENV File from Secrets
+        run: |
+          echo "${{ secrets.ENV_FILE }}" > env_content.txt
+          scp -i ~/.ssh/id_rsa env_content.txt root@${{ secrets.VDS_HOST }}:/root/${{ github.event.repository.name }}/.env
+          rm env_content.txt
+
+      - name: 🦀 Build and Deploy Rust Project
+        run: |
+          ssh -i ~/.ssh/id_rsa root@${{ secrets.VDS_HOST }} << 'EOF'
+            cd /root/${{ github.event.repository.name }}
+            echo "🔨 Сборка проекта"
+            cargo build --release
+            echo "🚀 Разворачивание проекта"
+            pm2 restart ${{ github.event.repository.name }} || pm2 start "./target/release/${{ github.event.repository.name }}.exe" --name ${{ github.event.repository.name }}
+            echo "🔨 Сохранение процессов"
+            pm2 save
+          EOF
