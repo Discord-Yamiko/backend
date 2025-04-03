@@ -45,7 +45,7 @@ jobs:
             echo "🔨 Сборка проекта"
             cargo build --release
             echo "🚀 Разворачивание проекта"
-            pm2 restart ${{ github.event.repository.name }} || pm2 start "./target/release/${{ github.event.repository.name }}.exe" --name ${{ github.event.repository.name }}
+            pm2 restart ${{ github.event.repository.name }} || pm2 start "./target/release/${{ github.event.repository.name }}" --name ${{ github.event.repository.name }}
             echo "🔨 Сохранение процессов"
             pm2 save
           EOF
